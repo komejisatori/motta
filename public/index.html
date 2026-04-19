@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Motter Agent Demo</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="hero">
+        <p class="eyebrow">Daily Carry Recommendation Agent</p>
+        <h1>See what your agent thinks you should bring today.</h1>
+        <p class="hero-copy">
+          This demo currently uses mock calendar and weather data, with a Kimi-ready
+          backend interface for future integration.
+        </p>
+        <button id="generateButton" class="primary-button">Generate Recommendation</button>
+      </section>
+
+      <section class="dashboard">
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>Today's Context</h2>
+            <span id="providerBadge" class="badge">Waiting</span>
+          </div>
+          <div class="context-grid">
+            <div>
+              <h3>Calendar</h3>
+              <ul id="scheduleList" class="stack-list"></ul>
+            </div>
+            <div>
+              <h3>Weather</h3>
+              <div id="weatherCard" class="weather-card"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Suggested Items</h2>
+          <ul id="itemList" class="stack-list"></ul>
+        </article>
+
+        <article class="panel">
+          <h2>Agent Notes</h2>
+          <p id="summaryText" class="summary-text">
+            Click the button to generate a carry recommendation.
+          </p>
+          <ul id="tipsList" class="stack-list"></ul>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+  </html>
