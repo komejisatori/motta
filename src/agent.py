@@ -3,7 +3,7 @@ from copy import deepcopy
 from datetime import date, datetime, timezone
 from urllib import error, request
 
-KIMI_API_KEY = ""
+KIMI_API_KEY = "sk-"
 KIMI_BASE_URL = "https://api.moonshot.cn/v1"
 KIMI_MODEL = "moonshot-v1-8k"
 
