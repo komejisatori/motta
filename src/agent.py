@@ -19,19 +19,16 @@ DEFAULT_MOCK_CALENDAR = [
         "time": "09:00",
         "title": "Team sync meeting",
         "location": "Office",
-        "notes": "Bring your laptop and prepare project updates.",
     },
     {
         "time": "12:30",
         "title": "Client lunch",
         "location": "Shibuya",
-        "notes": "Business casual outfit is recommended.",
     },
     {
         "time": "18:30",
         "title": "Gym session",
         "location": "Fitness club",
-        "notes": "Indoor training after work.",
     },
 ]
 

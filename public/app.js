@@ -10,15 +10,12 @@ const systemPromptInput = document.getElementById("systemPromptInput");
 const event1Time = document.getElementById("event1Time");
 const event1Title = document.getElementById("event1Title");
 const event1Location = document.getElementById("event1Location");
-const event1Notes = document.getElementById("event1Notes");
 const event2Time = document.getElementById("event2Time");
 const event2Title = document.getElementById("event2Title");
 const event2Location = document.getElementById("event2Location");
-const event2Notes = document.getElementById("event2Notes");
 const event3Time = document.getElementById("event3Time");
 const event3Title = document.getElementById("event3Title");
 const event3Location = document.getElementById("event3Location");
-const event3Notes = document.getElementById("event3Notes");
 const weatherConditionInput = document.getElementById("weatherConditionInput");
 const weatherTemperatureInput = document.getElementById("weatherTemperatureInput");
 const weatherHumidityInput = document.getElementById("weatherHumidityInput");
@@ -39,19 +36,16 @@ const DEFAULT_MOCK_CALENDAR = [
     time: "09:00",
     title: "Team sync meeting",
     location: "Office",
-    notes: "Bring your laptop and prepare project updates.",
   },
   {
     time: "12:30",
     title: "Client lunch",
     location: "Shibuya",
-    notes: "Business casual outfit is recommended.",
   },
   {
     time: "18:30",
     title: "Gym session",
     location: "Fitness club",
-    notes: "Indoor training after work.",
   },
 ];
 
@@ -73,7 +67,6 @@ function renderSchedule(schedule) {
         <li>
           <span class="list-title">${event.time} · ${event.title}</span>
           <span class="list-meta">${event.location}</span>
-          <span class="list-meta">${event.notes}</span>
         </li>
       `,
     )
@@ -146,26 +139,23 @@ function buildEditablePayload() {
       time: event1Time.value.trim(),
       title: event1Title.value.trim(),
       location: event1Location.value.trim(),
-      notes: event1Notes.value.trim(),
     },
     {
       time: event2Time.value.trim(),
       title: event2Title.value.trim(),
       location: event2Location.value.trim(),
-      notes: event2Notes.value.trim(),
     },
     {
       time: event3Time.value.trim(),
       title: event3Title.value.trim(),
       location: event3Location.value.trim(),
-      notes: event3Notes.value.trim(),
     },
   ];
 
   for (let index = 0; index < calendar.length; index += 1) {
     const event = calendar[index];
-    if (!event.time || !event.title || !event.location || !event.notes) {
-      throw new Error(`Event ${index + 1} needs time, title, location, and notes.`);
+    if (!event.time || !event.title || !event.location) {
+      throw new Error(`Event ${index + 1} needs time, title, and location.`);
     }
   }
 
@@ -411,15 +401,12 @@ systemPromptInput.value = DEFAULT_SYSTEM_PROMPT;
 event1Time.value = DEFAULT_MOCK_CALENDAR[0].time;
 event1Title.value = DEFAULT_MOCK_CALENDAR[0].title;
 event1Location.value = DEFAULT_MOCK_CALENDAR[0].location;
-event1Notes.value = DEFAULT_MOCK_CALENDAR[0].notes;
 event2Time.value = DEFAULT_MOCK_CALENDAR[1].time;
 event2Title.value = DEFAULT_MOCK_CALENDAR[1].title;
 event2Location.value = DEFAULT_MOCK_CALENDAR[1].location;
-event2Notes.value = DEFAULT_MOCK_CALENDAR[1].notes;
 event3Time.value = DEFAULT_MOCK_CALENDAR[2].time;
 event3Title.value = DEFAULT_MOCK_CALENDAR[2].title;
 event3Location.value = DEFAULT_MOCK_CALENDAR[2].location;
-event3Notes.value = DEFAULT_MOCK_CALENDAR[2].notes;
 weatherConditionInput.value = DEFAULT_MOCK_WEATHER.weather;
 weatherTemperatureInput.value = String(DEFAULT_MOCK_WEATHER.temperature);
 weatherHumidityInput.value = String(DEFAULT_MOCK_WEATHER.humidity);
