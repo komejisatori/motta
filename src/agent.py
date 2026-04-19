@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from datetime import date, datetime, timezone
 from urllib import error, request
 
@@ -13,52 +14,49 @@ SYSTEM_PROMPTS = (
     "and concise."
 )
 
+DEFAULT_MOCK_CALENDAR = [
+    {
+        "time": "09:00",
+        "title": "Team sync meeting",
+        "location": "Office",
+        "notes": "Bring your laptop and prepare project updates.",
+    },
+    {
+        "time": "12:30",
+        "title": "Client lunch",
+        "location": "Shibuya",
+        "notes": "Business casual outfit is recommended.",
+    },
+    {
+        "time": "18:30",
+        "title": "Gym session",
+        "location": "Fitness club",
+        "notes": "Indoor training after work.",
+    },
+]
 
-def get_mock_calendar(day):
-    return [
-        {
-            "time": "09:00",
-            "title": "Team sync meeting",
-            "location": "Office",
-            "notes": "Bring your laptop and prepare project updates.",
-        },
-        {
-            "time": "12:30",
-            "title": "Client lunch",
-            "location": "Shibuya",
-            "notes": "Business casual outfit is recommended.",
-        },
-        {
-            "time": "18:30",
-            "title": "Gym session",
-            "location": "Fitness club",
-            "notes": "Indoor training after work.",
-        },
-    ]
+DEFAULT_MOCK_WEATHER = {
+    "weather": "Light rain",
+    "temperature": "17C",
+    "humidity": "76%",
+    "uv_index": 4,
+    "highC": 20,
+    "lowC": 14,
+    "windKph": 20,
+    "precipitationChance": 78,
+}
 
 
-def get_mock_weather(day):
+def read_weather(day, mock_weather):
+    weather = deepcopy(mock_weather)
+    weather["date"] = day
+    return weather
+
+
+def read_calendar(day, mock_calendar):
     return {
         "date": day,
-        "weather": "Light rain",
-        "temperature": "17C",
-        "humidity": "76%",
-        "uv_index": 4,
-        "highC": 20,
-        "lowC": 14,
-        "windKph": 20,
-        "precipitationChance": 78,
-    }
-
-
-def read_weather(day):
-    return get_mock_weather(day)
-
-
-def read_calendar(day):
-    return {
-        "date": day,
-        "events": get_mock_calendar(day),
+        "events": deepcopy(mock_calendar),
     }
 
 
@@ -154,11 +152,11 @@ def get_tool_schemas():
     ]
 
 
-def call_tool(name, arguments):
+def call_tool(name, arguments, mock_calendar, mock_weather):
     if name == "read_weather":
-        return read_weather(arguments["day"])
+        return read_weather(arguments["day"], mock_weather)
     if name == "read_calendar":
-        return read_calendar(arguments["day"])
+        return read_calendar(arguments["day"], mock_calendar)
     if name == "push_todolist":
         return push_todolist(
             day=arguments["day"],
@@ -169,8 +167,8 @@ def call_tool(name, arguments):
     raise RuntimeError(f"Unsupported tool call: {name}")
 
 
-def request_kimi_completion(*, messages, tools):
-    if not KIMI_API_KEY:
+def request_kimi_completion(*, messages, tools, api_key):
+    if not api_key:
         raise RuntimeError("KIMI_API_KEY is missing in src/agent.py.")
 
     payload = json.dumps(
@@ -188,7 +186,7 @@ def request_kimi_completion(*, messages, tools):
         data=payload,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {KIMI_API_KEY}",
+            "Authorization": f"Bearer {api_key}",
         },
         method="POST",
     )
@@ -203,11 +201,21 @@ def request_kimi_completion(*, messages, tools):
 
 
 def run_kimi_agent(day):
+    return run_kimi_agent_with_context(
+        day=day,
+        system_prompt=SYSTEM_PROMPTS,
+        mock_calendar=DEFAULT_MOCK_CALENDAR,
+        mock_weather=DEFAULT_MOCK_WEATHER,
+        api_key=KIMI_API_KEY,
+    )
+
+
+def run_kimi_agent_with_context(day, system_prompt, mock_calendar, mock_weather, api_key):
     tools = get_tool_schemas()
     messages = [
         {
             "role": "system",
-            "content": SYSTEM_PROMPTS,
+            "content": system_prompt,
         },
         {
             "role": "user",
@@ -220,7 +228,7 @@ def run_kimi_agent(day):
     final_todolist = None
 
     for _ in range(6):
-        response_data = request_kimi_completion(messages=messages, tools=tools)
+        response_data = request_kimi_completion(messages=messages, tools=tools, api_key=api_key)
 
         message = ((response_data.get("choices") or [{}])[0]).get("message") or {}
         tool_calls = message.get("tool_calls") or []
@@ -241,7 +249,7 @@ def run_kimi_agent(day):
             function_data = tool_call.get("function") or {}
             tool_name = function_data.get("name")
             arguments = json.loads(function_data.get("arguments") or "{}")
-            tool_result = call_tool(tool_name, arguments)
+            tool_result = call_tool(tool_name, arguments, mock_calendar, mock_weather)
 
             if tool_name == "push_todolist":
                 final_todolist = tool_result
@@ -265,10 +273,27 @@ def run_kimi_agent(day):
 
 
 def generate_daily_carry_plan(overrides=None):
-    requested_day = ((overrides or {}).get("date")) or date.today().isoformat()
-    weather = read_weather(requested_day)
-    calendar_data = read_calendar(requested_day)
-    recommendation, prompt_preview = run_kimi_agent(requested_day)
+    overrides = overrides or {}
+    requested_day = overrides.get("date") or date.today().isoformat()
+    system_prompt = overrides.get("system_prompt") or SYSTEM_PROMPTS
+    mock_calendar = overrides.get("mock_calendar")
+    mock_weather = overrides.get("mock_weather")
+    runtime_api_key = (overrides.get("kimi_api_key") or "").strip() or KIMI_API_KEY
+
+    if not isinstance(mock_calendar, list):
+        mock_calendar = deepcopy(DEFAULT_MOCK_CALENDAR)
+    if not isinstance(mock_weather, dict):
+        mock_weather = deepcopy(DEFAULT_MOCK_WEATHER)
+
+    weather = read_weather(requested_day, mock_weather)
+    calendar_data = read_calendar(requested_day, mock_calendar)
+    recommendation, prompt_preview = run_kimi_agent_with_context(
+        day=requested_day,
+        system_prompt=system_prompt,
+        mock_calendar=mock_calendar,
+        mock_weather=mock_weather,
+        api_key=runtime_api_key,
+    )
 
     return {
         "provider": "kimi",

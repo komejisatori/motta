@@ -12,10 +12,128 @@
         <p class="eyebrow">Daily Carry Recommendation Agent</p>
         <h1>See what your agent thinks you should bring today.</h1>
         <p class="hero-copy">
-          This demo currently uses mock calendar and weather data, with a Kimi-ready
-          backend interface for future integration.
+          Edit the prompt and mock inputs, then click the button to compare different
+          recommendation behaviors.
         </p>
         <button id="generateButton" class="primary-button">Generate Recommendation</button>
+      </section>
+
+      <section class="panel editor-panel">
+        <h2>Agent Inputs</h2>
+        <p class="summary-text">All fields below are editable and sent to the backend on each run.</p>
+        <div class="editor-stack">
+          <label class="editor-field">
+            <span>Kimi API Key</span>
+            <input id="kimiApiKeyInput" type="password" placeholder="sk-..." />
+          </label>
+          <label class="editor-field">
+            <span>System Prompt</span>
+            <textarea id="systemPromptInput"></textarea>
+          </label>
+        </div>
+
+        <div class="editor-subsection">
+          <h3>Calendar (3 Events)</h3>
+          <div class="calendar-grid">
+            <article class="input-card">
+              <h4>Event 1</h4>
+              <label class="input-row">
+                <span>Time</span>
+                <input id="event1Time" type="time" />
+              </label>
+              <label class="input-row">
+                <span>Title</span>
+                <input id="event1Title" type="text" />
+              </label>
+              <label class="input-row">
+                <span>Location</span>
+                <input id="event1Location" type="text" />
+              </label>
+              <label class="input-row">
+                <span>Notes</span>
+                <input id="event1Notes" type="text" />
+              </label>
+            </article>
+
+            <article class="input-card">
+              <h4>Event 2</h4>
+              <label class="input-row">
+                <span>Time</span>
+                <input id="event2Time" type="time" />
+              </label>
+              <label class="input-row">
+                <span>Title</span>
+                <input id="event2Title" type="text" />
+              </label>
+              <label class="input-row">
+                <span>Location</span>
+                <input id="event2Location" type="text" />
+              </label>
+              <label class="input-row">
+                <span>Notes</span>
+                <input id="event2Notes" type="text" />
+              </label>
+            </article>
+
+            <article class="input-card">
+              <h4>Event 3</h4>
+              <label class="input-row">
+                <span>Time</span>
+                <input id="event3Time" type="time" />
+              </label>
+              <label class="input-row">
+                <span>Title</span>
+                <input id="event3Title" type="text" />
+              </label>
+              <label class="input-row">
+                <span>Location</span>
+                <input id="event3Location" type="text" />
+              </label>
+              <label class="input-row">
+                <span>Notes</span>
+                <input id="event3Notes" type="text" />
+              </label>
+            </article>
+          </div>
+        </div>
+
+        <div class="editor-subsection">
+          <h3>Weather (Fixed Keys)</h3>
+          <div class="weather-input-grid">
+            <label class="input-row">
+              <span>weather</span>
+              <input id="weatherConditionInput" type="text" />
+            </label>
+            <label class="input-row">
+              <span>temperature (C)</span>
+              <input id="weatherTemperatureInput" type="number" step="1" />
+            </label>
+            <label class="input-row">
+              <span>humidity (%)</span>
+              <input id="weatherHumidityInput" type="number" step="1" min="0" max="100" />
+            </label>
+            <label class="input-row">
+              <span>uv_index</span>
+              <input id="weatherUvInput" type="number" step="1" min="0" />
+            </label>
+            <label class="input-row">
+              <span>highC</span>
+              <input id="weatherHighInput" type="number" step="1" />
+            </label>
+            <label class="input-row">
+              <span>lowC</span>
+              <input id="weatherLowInput" type="number" step="1" />
+            </label>
+            <label class="input-row">
+              <span>windKph</span>
+              <input id="weatherWindInput" type="number" step="1" min="0" />
+            </label>
+            <label class="input-row">
+              <span>precipitationChance (%)</span>
+              <input id="weatherRainInput" type="number" step="1" min="0" max="100" />
+            </label>
+          </div>
+        </div>
       </section>
 
       <section class="dashboard">
