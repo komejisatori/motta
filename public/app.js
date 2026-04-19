@@ -28,6 +28,9 @@ const weatherLowInput = document.getElementById("weatherLowInput");
 const weatherWindInput = document.getElementById("weatherWindInput");
 const weatherRainInput = document.getElementById("weatherRainInput");
 
+const KIMI_BASE_URL = "https://api.moonshot.cn/v1";
+const KIMI_MODEL = "moonshot-v1-8k";
+
 const DEFAULT_SYSTEM_PROMPT =
   "You are a daily carry recommendation agent. You must use tools to collect the calendar and weather for the requested day, then call push_todolist with a JSON recommendation. Keep the output practical and concise.";
 
@@ -206,33 +209,192 @@ function buildEditablePayload() {
   };
 }
 
+function getToolSchemas() {
+  return [
+    {
+      type: "function",
+      function: {
+        name: "read_weather",
+        description:
+          "Get the weather of a specific day. The returned weather includes weather, temperature, humidity, and UV index.",
+        parameters: {
+          type: "object",
+          properties: {
+            day: { type: "string", description: "Target day in YYYY-MM-DD format." },
+          },
+          required: ["day"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "read_calendar",
+        description: "Get the calendar events of a specific day.",
+        parameters: {
+          type: "object",
+          properties: {
+            day: { type: "string", description: "Target day in YYYY-MM-DD format." },
+          },
+          required: ["day"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "push_todolist",
+        description:
+          "Generate and return the recommendation items of a specific day. The returned items must be included in JSON format.",
+        parameters: {
+          type: "object",
+          properties: {
+            day: { type: "string" },
+            summary: { type: "string" },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  reason: { type: "string" },
+                },
+                required: ["name", "reason"],
+              },
+            },
+            tips: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+          required: ["day", "summary", "items", "tips"],
+        },
+      },
+    },
+  ];
+}
+
+function callTool(name, args, context) {
+  if (name === "read_weather") {
+    return { ...context.mock_weather, date: args.day };
+  }
+  if (name === "read_calendar") {
+    return { date: args.day, events: context.mock_calendar };
+  }
+  if (name === "push_todolist") {
+    return {
+      date: args.day,
+      summary: args.summary,
+      items: args.items,
+      tips: args.tips,
+    };
+  }
+  throw new Error(`Unsupported tool call: ${name}`);
+}
+
+async function requestKimiCompletion(messages, tools, apiKey) {
+  const response = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: KIMI_MODEL,
+      temperature: 0.2,
+      messages,
+      tools,
+      tool_choice: "auto",
+    }),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.error?.message || data?.detail || `Kimi API failed (${response.status}).`);
+  }
+  return data;
+}
+
+async function runKimiAgent(context) {
+  const apiKey = context.kimi_api_key;
+  if (!apiKey) {
+    throw new Error("Please enter Kimi API Key.");
+  }
+
+  const day = new Date().toISOString().slice(0, 10);
+  const tools = getToolSchemas();
+  const messages = [
+    { role: "system", content: context.system_prompt },
+    {
+      role: "user",
+      content: `Create a daily carry recommendation for ${day}. Use read_weather, read_calendar, and then push_todolist.`,
+    },
+  ];
+
+  let finalTodo = null;
+
+  for (let i = 0; i < 6; i += 1) {
+    const completion = await requestKimiCompletion(messages, tools, apiKey);
+    const message = completion?.choices?.[0]?.message || {};
+    const toolCalls = message.tool_calls || [];
+
+    const assistantMessage = { role: "assistant" };
+    if (message.content !== undefined && message.content !== null) {
+      assistantMessage.content = message.content;
+    }
+    if (toolCalls.length > 0) {
+      assistantMessage.tool_calls = toolCalls;
+    }
+    messages.push(assistantMessage);
+
+    if (toolCalls.length === 0) {
+      break;
+    }
+
+    for (const toolCall of toolCalls) {
+      const fn = toolCall.function || {};
+      const toolName = fn.name;
+      const args = JSON.parse(fn.arguments || "{}");
+      const result = callTool(toolName, args, context);
+
+      if (toolName === "push_todolist") {
+        finalTodo = result;
+      }
+
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        name: toolName,
+        content: JSON.stringify(result),
+      });
+    }
+
+    if (finalTodo) {
+      break;
+    }
+  }
+
+  if (!finalTodo) {
+    throw new Error("Kimi did not return push_todolist.");
+  }
+
+  return finalTodo;
+}
+
 async function generateRecommendation() {
   generateButton.disabled = true;
   generateButton.textContent = "Generating...";
 
   try {
-    const payload = buildEditablePayload();
-    const response = await fetch("/api/generate_daily_carry_plan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    const inputContext = buildEditablePayload();
+    const recommendation = await runKimiAgent(inputContext);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.detail || "Failed to load recommendation data.");
-    }
-
-    const data = await response.json();
-
-    providerBadge.textContent = data.provider;
-    renderSchedule(payload.mock_calendar);
-    renderWeather(payload.mock_weather);
-    renderItems(data.recommendation.items);
-    renderTips(data.recommendation.tips);
-    summaryText.textContent = data.recommendation.summary;
+    providerBadge.textContent = "kimi-direct";
+    renderSchedule(inputContext.mock_calendar);
+    renderWeather(inputContext.mock_weather);
+    renderItems(recommendation.items || []);
+    renderTips(recommendation.tips || []);
+    summaryText.textContent = recommendation.summary || "No summary returned.";
   } catch (error) {
     providerBadge.textContent = "error";
     summaryText.textContent = error.message;
